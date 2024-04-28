@@ -1,43 +1,49 @@
-#!/usr/bin/env python
-import rospy
+#include "ros/ros.h"
+#include "AR_week5_test/cubic_traj_coeffs.h"
+#include "AR_week5_test/position_trajectory.h"
+#include "AR_week5_test/velocity_trajectory.h"
+#include "AR_week5_test/acceleration_trajectory.h"
+#include <cmath>
 
-from AR_week5_test.msg import cubic_traj_coeffs
-from AR_week5_test.msg import position_trajectory
-from AR_week5_test.msg import velocity_trajectory
-from AR_week5_test.msg import acceleration_trajectory
+void callback(const AR_week5_test::cubic_traj_coeffs::ConstPtr& data)
+{
+    // Publishing initialised
+    ros::NodeHandle nh;
+    ros::Publisher pub1 = nh.advertise
+    <AR_week5_test::position_trajectory>("position_trajectory", 0);
+    ros::Publisher pub2 = nh.advertise
+    <AR_week5_test::position_trajectory>("position_trajectory", 0);
+    ros::Publisher pub2 = nh.advertise
+    <AR_week5_test::acceleration_trajectory>("acceleration_trajectory", 0);
 
+    // Initialise messages
+    AR_week5_test::position_trajectory msg1;
+    AR_week5_test::velocity_trajectory msg2;
+    AR_week5_test::acceleration_trajectory msg3;
 
-def callback(data):
-    # publishing initialised
-    pub1 = rospy.Publisher('position_trajectory', position_trajectory, queue_size=0)
-    pub2 = rospy.Publisher('velocity_trajectory', velocity_trajectory, queue_size=0)
-    pub3 = rospy.Publisher('acceleration_trajectory', acceleration_trajectory, queue_size=0)
-    
-    # initialise messages
-    msg1 = position_trajectory()    
-    msg2 = velocity_trajectory()
-    msg3 = acceleration_trajectory()
+    // Calculate trajectories
+    msg1.trj = data->a0 + data->a1 * data->tf + data->a2 * std::pow(data->tf, 2) + data->a3 * std::pow(data->tf, 3);
+    msg2.trj = data->a1 + 2 * data->a2 * data->tf + 3 * data->a3 * std::pow(data->tf, 2);
+    msg3.trj = 2 * data->a2 + 6 * data->a3 * data->tf;
 
-    # calculate trajectories
-    msg1.trj = data.a0 + data.a1 * data.tf + data.a2 * (data.tf**2) + data.a3 * (data.tf**3)
-    msg2.trj = data.a1 + 2 * data.a2 * data.tf + 3 * data.a3 * (data.tf**2)
-    msg3.trj = 2 * data.a2 + 6 * data.a3 * data.tf
-    # publish messages
-    print('Publishing trajectories %d, %d, %d' % (msg1.trj, msg2.trj, msg3.trj))
-    pub1.publish(msg1)
-    pub2.publish(msg2)
-    pub3.publish(msg3)
+    // Publish messages
+    ROS_INFO("Publishing trajectories %f, %f, %f", msg1.trj, msg2.trj, msg3.trj);
+    pub1.publish(msg1);
+    pub2.publish(msg2);
+    pub3.publish(msg3);
+}
 
-def plot_cubic_traj():
-    # initialise new node
-    rospy.init_node('plot_cubic_traj', anonymous=True)
-    # subscribe to cubic_traj_params and send data to callback
-    rospy.Subscriber('coeffs', cubic_traj_coeffs, callback)
-    # prevent from dying
-    rospy.spin()
+int main(int argc, char **argv)
+{
+    // Initialize new node
+    ros::init(argc, argv, "plot_cubic_traj");
+    ros::NodeHandle nh;
 
-if __name__ == "__main__":
-    try:
-        plot_cubic_traj()
-    except rospy.ROSInterruptException:
-        pass
+    // Subscribe to cubic_traj_coeffs and send data to callback
+    ros::Subscriber sub = nh.subscribe("coeffs", 0, callback);
+
+    // Prevent from dying
+    ros::spin();
+
+    return 0;
+}
